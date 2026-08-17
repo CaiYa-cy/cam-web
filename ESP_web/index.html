@@ -1,0 +1,619 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="emerald">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贴片机面板</title>
+<style>
+:root {
+  --v-theme-background: #f9fcf6;
+  --v-theme-surface: #ffffff;
+  --v-theme-surface-variant: #dce5db;
+  --v-theme-primary: #006e4e;
+  --v-theme-primary-light: #2e8b6e;
+  --v-theme-on-background: #191c1a;
+  --v-theme-on-surface: #191c1a;
+  --v-theme-on-surface-variant: #414941;
+  --v-theme-outline: #717971;
+  --v-theme-outline-variant: #c1c9c0;
+  --v-theme-error: #ba1a1a;
+  --v-theme-error-container: #ffdad6;
+  --v-theme-on-error-container: #410002;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
+  background: var(--v-theme-background);
+  color: var(--v-theme-on-background);
+  min-height: 100vh;
+  letter-spacing: 0;
+}
+.app-bar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--v-theme-surface);
+  border-bottom: 1px solid var(--v-theme-outline-variant);
+  color: var(--v-theme-on-surface);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; height: 56px;
+}
+.app-bar__title {
+  font-size: 1.1rem; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--v-theme-primary);
+}
+.app-bar__status { display: flex; align-items: center; gap: 18px; font-size: 0.8rem; }
+.status-indicator { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; position: relative; }
+.status-dot::after { content: ""; position: absolute; top: -2px; left: -2px; width: 12px; height: 12px; border-radius: 50%; opacity: 0.3; }
+.status-dot--on { background: #4caf50; }
+.status-dot--on::after { background: #4caf50; }
+.status-dot--off { background: #ef9a9a; }
+.status-dot--off::after { background: #ef9a9a; }
+
+.section-divider {
+  background: #e8f5e9;
+  border: 1px solid var(--v-theme-outline-variant);
+  border-radius: 10px;
+  padding: 14px 24px;
+  margin: 24px 24px 12px 24px;
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--v-theme-primary);
+  text-align: center; letter-spacing: 0.4em;
+  box-shadow: 3px 3px 0 0 rgba(0,0,0,0.05);
+}
+
+.card {
+  position: relative; background: #FFFDF0;
+  border: 1px solid var(--v-theme-outline-variant); border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 0.08);
+  transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-color 0.28s ease, box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.card:hover { transform: translate(-6px, -6px); border-color: var(--v-theme-primary-light); box-shadow: 12px 12px 0 0 rgba(0, 110, 78, 0.15); }
+.card__header { font-size: 0.68rem; font-weight: 600; color: var(--v-theme-on-surface-variant); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.status-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.status-tag { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 64px; padding: 5px 4px; border-radius: 8px; font-size: 0.82rem; font-weight: 500; border: 1px solid var(--v-theme-outline-variant); color: var(--v-theme-on-surface-variant); background: transparent; transition: all 0.25s; }
+.status-tag.active { color: #fff; border-color: transparent; box-shadow: 0 0 10px rgba(0,110,78,0.3); }
+.status-tag.active[data-status="SMTing"]   { background: #006e4e; }
+.status-tag.active[data-status="Waiting"]  { background: #6b7280; }
+.status-tag.active[data-status="Importing"]{ background: #d97706; }
+.status-tag.active[data-status="Heating"]  { background: #dc2626; }
+.status-tag.active[data-status="Finished"] { background: #16a34a; }
+.progress-text, .temp-text { font-size: 1.3em; font-weight: 600; color: var(--v-theme-on-surface); margin-bottom: 8px; }
+.progress-bar-track { width: 100%; height: 10px; background: var(--v-theme-surface-variant); border-radius: 5px; overflow: hidden; }
+.progress-bar-fill { height: 100%; width: 0%; border-radius: 5px; background: linear-gradient(90deg, #2e8b6e, #006e4e); transition: width 0.4s ease; }
+.progress-bar-fill.temp-fill { background: linear-gradient(90deg, #ef5350, #ff7043, #ffa726); }
+.card--split { display: flex; align-items: center; padding: 16px 20px; }
+.split-left, .split-right { flex: 1; text-align: center; }
+.split-left  { text-align: left; }
+.split-right { text-align: right; }
+.split-divider { width: 1px; height: 40px; background: var(--v-theme-outline-variant); margin: 0 16px; flex-shrink: 0; }
+.error-code { font-size: 1.5em; font-weight: 700; color: var(--v-theme-primary); font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; }
+.update-time { font-size: 1.5em; font-weight: 600; color: var(--v-theme-on-surface); font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; }
+.container { max-width: 700px; margin: 0 auto; padding: 0 20px; }
+.monitor-section { padding: 0 0 24px 0; }
+
+/* ===== 监控布局 ===== */
+.monitor-layout {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+.monitor-left { flex: 0 0 610px; min-width: 0; }
+.monitor-camera {
+  flex-shrink: 0;
+  width: 500px;
+}
+.camera-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.cam-slot {
+  aspect-ratio: 1 / 1;
+  background: #16213e;
+  border: 2px solid #1e2d4a;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.cam-slot.active {
+  border-color: #0096ff;
+  box-shadow: 0 0 12px rgba(0,150,255,0.35);
+}
+.cam-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.cam-slot-num {
+  position: absolute;
+  top: 6px; left: 6px;
+  background: rgba(0,0,0,0.65);
+  color: #aac;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+.cam-slot-placeholder {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  color: #3a4a6a;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.camera-status {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6a8aaa;
+  text-align: center;
+}
+.info-grid { display: flex; flex-direction: column; gap: 14px; }
+
+.control-layout { display: flex; gap: 20px; max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+.control-main { flex: 1; min-width: 0; display: flex; }
+.control-main .info-grid { flex: 1; }
+.control-main .info-grid > .card { flex: 1 1 auto; }
+.control-sidebar { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+.control-csv { width: 300px; flex-shrink: 0; }
+.ctrl-btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.ctrl-btn { padding: 10px 22px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; border: 1px solid transparent; cursor: pointer; transition: all 0.2s ease; color: #fff; user-select: none; letter-spacing: 0.02em; }
+.ctrl-btn:hover { filter: brightness(1.12); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.ctrl-btn:active { transform: translateY(0); }
+.ctrl-btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; box-shadow: none; }
+.ctrl-btn--start, .ctrl-btn--pause, .ctrl-btn--resume, .ctrl-btn--stop, .ctrl-btn--estop { background: #006e4e; border-color: #005540; }
+.ctrl-btn--heat-on  { background: #dc2626; border-color: #b91c1c; }
+.ctrl-btn--heat-off { background: #6b7280; border-color: #4b5563; }
+.csv-picker-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.csv-file-info { font-size: 0.85rem; font-weight: 600; color: var(--v-theme-on-surface); word-break: break-all; margin-bottom: 4px; min-height: 1.2em; }
+.csv-file-meta { font-size: 0.78rem; color: var(--v-theme-on-surface-variant); margin-bottom: 12px; min-height: 1.2em; }
+.csv-confirm-btn { width: 100%; margin-bottom: 14px; }
+.csv-progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--v-theme-on-surface-variant); margin-bottom: 4px; }
+.csv-status { font-size: 0.82rem; font-weight: 600; color: var(--v-theme-on-surface); margin: 8px 0 12px 0; min-height: 1.2em; }
+.csv-status.status--success { color: #16a34a; }
+.csv-status.status--error { color: #dc2626; }
+.csv-cancel-btn { width: 100%; }
+.status-card { flex: 1; background: #FFFDF0; border: 1px solid var(--v-theme-outline-variant); border-radius: 10px; padding: 16px; box-shadow: 6px 6px 0 0 rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: center; }
+.status-card__title { font-size: 0.68rem; font-weight: 600; color: var(--v-theme-on-surface-variant); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.status-card__value { font-size: 1.1rem; font-weight: 700; color: var(--v-theme-on-surface); }
+.status-card__value.proc--running  { color: #006e4e; }
+.status-card__value.proc--paused   { color: #d97706; }
+.status-card__value.proc--finished { color: #6b7280; }
+.status-card__value.proc--estop    { color: #dc2626; }
+.status-card__heat { font-size: 0.9rem; font-weight: 600; }
+.status-card__heat.heating { color: #dc2626; }
+.status-card__heat.idle    { color: #9ca3af; }
+.log-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.log-status { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--v-theme-on-surface-variant); }
+.log-status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.log-status-dot.connected { background: #4caf50; }
+.log-status-dot.disconnected { background: #ef9a9a; }
+.log-btn { padding: 6px 16px; border: 1px solid var(--v-theme-outline); border-radius: 6px; background: var(--v-theme-surface); color: var(--v-theme-on-surface); cursor: pointer; font-size: 0.82rem; font-weight: 500; transition: all 0.2s; }
+.log-btn:hover { background: var(--v-theme-surface-variant); }
+.log-btn--primary { background: var(--v-theme-primary); color: #fff; border-color: var(--v-theme-primary); }
+.log-btn--primary:hover { background: var(--v-theme-primary-light); }
+.log-container { background: #1a1a2e; border: 1px solid var(--v-theme-outline-variant); border-radius: 10px; padding: 16px; height: 520px; overflow-y: auto; font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; font-size: 0.82rem; line-height: 1.7; color: #d4d4d4; box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 0.08); }
+.log-container::-webkit-scrollbar { width: 6px; }
+.log-container::-webkit-scrollbar-track { background: transparent; }
+.log-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+.log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.log-time { color: #777; margin-right: 14px; }
+.log-msg { color: #d4d4d4; }
+.log-entry--system .log-time, .log-entry--system .log-msg { color: #ffa726; }
+.log-entry--error .log-time, .log-entry--error .log-msg { color: #ef5350; }
+.log-placeholder { color: #555; text-align: center; padding: 100px 0; font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif; font-size: 0.9rem; }
+@media (max-width: 1040px) {
+  .control-layout { flex-direction: column; }
+  .control-csv { width: 100%; }
+}
+</style>
+</head>
+<body>
+<header class="app-bar">
+  <span class="app-bar__title">贴片机面板</span>
+  <div class="app-bar__status">
+    <div class="status-indicator"><span id="machineDot" class="status-dot status-dot--off"></span><span id="machineText">贴片机未连接</span></div>
+  </div>
+</header>
+
+<div class="section-divider">监  控</div>
+<div class="monitor-section">
+  <div class="monitor-layout">
+    <div class="monitor-left">
+      <div class="info-grid">
+        <div class="card"><div class="card__header">状态</div><div class="status-row">
+          <span class="status-tag active" data-status="Waiting">等待中</span>
+          <span class="status-tag" data-status="Importing">导入中</span>
+          <span class="status-tag" data-status="SMTing">贴片中</span>
+          <span class="status-tag" data-status="Heating">加热中</span>
+          <span class="status-tag" data-status="Finished">完毕</span>
+        </div></div>
+        <div class="card"><div class="card__header">贴片进度</div><div class="progress-text" id="progressText">--/--</div><div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div></div>
+        <div class="card"><div class="card__header">加热台温度</div><div class="temp-text" id="tempText">--\u00B0C</div><div class="progress-bar-track"><div class="progress-bar-fill temp-fill" id="tempFill"></div></div></div>
+        <div class="card card--split"><div class="split-left"><div class="card__header">错误码</div><div class="error-code" id="fault">00</div></div><div class="split-divider"></div><div class="split-right"><div class="card__header">更新时间</div><div class="update-time" id="updateTime">00:00:00</div></div></div>
+      </div>
+    </div>
+    <div class="monitor-camera">
+      <div class="camera-grid" id="cameraGrid">
+        <div class="cam-slot" id="slot0"><span class="cam-slot-num">1</span><span class="cam-slot-placeholder">等待</span></div>
+        <div class="cam-slot" id="slot1"><span class="cam-slot-num">2</span><span class="cam-slot-placeholder">等待</span></div>
+        <div class="cam-slot" id="slot2"><span class="cam-slot-num">3</span><span class="cam-slot-placeholder">等待</span></div>
+        <div class="cam-slot" id="slot3"><span class="cam-slot-num">4</span><span class="cam-slot-placeholder">等待</span></div>
+        <div class="cam-slot" id="slot4"><span class="cam-slot-num">5</span><span class="cam-slot-placeholder">等待</span></div>
+        <div class="cam-slot" id="slot5"><span class="cam-slot-num">6</span><span class="cam-slot-placeholder">等待</span></div>
+      </div>
+      <div class="camera-status" id="cameraStatus">未连接</div>
+    </div>
+  </div>
+</div>
+<div class="section-divider">控  制</div>
+<div class="control-layout">
+<div class="control-csv card">
+<div class="card__header">CSV 导入</div>
+<div class="csv-picker-row">
+<button class="log-btn log-btn--primary" id="btnCsvPick" type="button">选择文件</button>
+<input type="file" id="csvFileInput" accept=".csv,text/csv" hidden>
+</div>
+<div class="csv-file-info" id="csvFileInfo">未选择文件</div>
+<div class="csv-file-meta" id="csvFileMeta"></div>
+<button class="ctrl-btn ctrl-btn--start csv-confirm-btn" id="btnCsvImport" disabled>确认导入</button>
+<div class="csv-progress-label"><span>导入进度</span><span id="csvProgressText">0%</span></div>
+<div class="progress-bar-track"><div class="progress-bar-fill" id="csvProgressFill"></div></div>
+<div class="csv-status" id="csvStatus">空闲</div>
+<button class="log-btn csv-cancel-btn" id="btnCsvCancel" disabled>取消导入</button>
+</div>
+<div class="control-main"><div class="info-grid">
+<div class="card"><div class="card__header">贴片流程控制</div>
+<div class="ctrl-btn-group">
+<button class="ctrl-btn ctrl-btn--start" id="btnStart">开始</button>
+<button class="ctrl-btn ctrl-btn--pause" id="btnPause">暂停</button>
+<button class="ctrl-btn ctrl-btn--resume" id="btnResume">继续</button>
+<button class="ctrl-btn ctrl-btn--stop" id="btnStop">结束</button>
+<button class="ctrl-btn ctrl-btn--estop" id="btnEstop">急停</button>
+</div></div>
+<div class="card"><div class="card__header">加热台控制</div>
+<div class="ctrl-btn-group">
+<button class="ctrl-btn ctrl-btn--heat-on" id="btnHeatOn">开启加热</button>
+<button class="ctrl-btn ctrl-btn--heat-off" id="btnHeatOff">暂停加热</button>
+</div></div>
+</div></div>
+<div class="control-sidebar">
+<div class="status-card"><div class="status-card__title">贴片进程状态</div>
+<div class="status-card__value proc--running" id="processStatus">运行中</div></div>
+<div class="status-card"><div class="status-card__title">加热台状态</div>
+<div class="status-card__heat idle" id="heatStatus">未在加热</div></div>
+</div></div>
+
+<div class="section-divider">日  志</div>
+<div class="container" style="padding-bottom:40px">
+<div class="log-toolbar"><div class="log-status"><span class="log-status-dot disconnected" id="logConnDot"></span><span id="logConnText">未连接</span></div>
+<span style="font-size:0.78rem;color:var(--v-theme-on-surface-variant)" id="logCount">日志: 0 条</span>
+<button class="log-btn log-btn--primary" id="logConnectBtn">连接</button>
+<button class="log-btn" id="logClearBtn">清空</button></div>
+<div class="log-container" id="logContainer"><div class="log-placeholder">等待连接...</div></div>
+</div>
+
+<script>
+var lastUpdateTime = Date.now();
+setInterval(function() {
+    var elapsed = Math.floor((Date.now() - lastUpdateTime) / 1000);
+    var h = Math.floor(elapsed / 3600) % 24;
+    var m = Math.floor((elapsed % 3600) / 60);
+    var s = elapsed % 60;
+    var el = document.getElementById("updateTime");
+    if (el) el.textContent = (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+}, 1000);
+
+var lastHeartbeatTime = 0;
+function updateMachineStatus(online) {
+    var dot = document.getElementById("machineDot");
+    var text = document.getElementById("machineText");
+    if (!dot || !text) return;
+    dot.className = "status-dot " + (online ? "status-dot--on" : "status-dot--off");
+    text.textContent = online ? "贴片机已连接" : "贴片机未连接";
+}
+setInterval(function() {
+    if (lastHeartbeatTime > 0 && Date.now() - lastHeartbeatTime > 30000) {
+        updateMachineStatus(false);
+    }
+}, 1000);
+
+function updateUI(data) {
+    if (data.progress) {
+        var pt = document.getElementById("progressText");
+        if (pt) pt.textContent = data.progress;
+        var parts = data.progress.split("/");
+        if (parts.length === 2) {
+            var x = parseInt(parts[0], 10);
+            var y = parseInt(parts[1], 10);
+            if (!isNaN(x) && !isNaN(y) && y > 0) {
+                var pct = x / y * 100;
+                var pf = document.getElementById("progressFill");
+                if (pf) pf.style.width = Math.min(pct, 100) + "%";
+            }
+        }
+    }
+    var activeStatuses = ["Importing", "SMTing", "Heating", "Finished"];
+    if (data.status !== undefined && activeStatuses.indexOf(data.status) >= 0) {
+        document.querySelectorAll(".status-tag").forEach(function(el) { el.classList.toggle("active", el.dataset.status === data.status); });
+    } else {
+        document.querySelectorAll(".status-tag").forEach(function(el) { el.classList.toggle("active", el.dataset.status === "Waiting"); });
+    }
+    if (data.heater_temp !== undefined) {
+        var tt = document.getElementById("tempText");
+        if (tt) tt.textContent = data.heater_temp.toFixed(1) + "\u00B0C";
+        var tmpPct = data.heater_temp / 230 * 100;
+        var tf = document.getElementById("tempFill");
+        if (tf) tf.style.width = Math.min(tmpPct, 100) + "%";
+    } else {
+        var tt2 = document.getElementById("tempText"); if (tt2) tt2.textContent = "--\u00B0C";
+        var tf2 = document.getElementById("tempFill"); if (tf2) tf2.style.width = "0%";
+    }
+    if (data.fault !== undefined) {
+        var ft = document.getElementById("fault"); if (ft) ft.textContent = data.fault;
+    }
+    if (data.file_status !== undefined) {
+        updateFileStatus(data.file_status);
+    }
+    if (data.file_progress !== undefined) {
+        updateFileProgress(data.file_progress);
+    }
+    lastUpdateTime = Date.now();
+}
+
+// ===== 日志页面逻辑 =====
+var ws = null;
+var logEntries = [];
+var autoScroll = true;
+function getTimestamp() { var now = new Date(); return now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+"."+now.getMilliseconds().toString().padStart(3,"0"); }
+function addLog(msg, type) { type = type || "info"; var entry = { time: getTimestamp(), msg: msg, type: type }; logEntries.push(entry); renderLogEntry(entry); updateLogCount(); }
+function renderLogEntry(entry) { var container = document.getElementById("logContainer"); if (!container) return; var placeholder = container.querySelector(".log-placeholder"); if (placeholder) placeholder.remove(); var div = document.createElement("div"); div.className = "log-entry"; if (entry.type === "system") div.classList.add("log-entry--system"); if (entry.type === "error") div.classList.add("log-entry--error"); var timeSpan = document.createElement("span"); timeSpan.className = "log-time"; timeSpan.textContent = entry.time; var msgSpan = document.createElement("span"); msgSpan.className = "log-msg"; msgSpan.textContent = entry.msg; div.appendChild(timeSpan); div.appendChild(msgSpan); container.appendChild(div); if (autoScroll) container.scrollTop = container.scrollHeight; }
+function clearLogs() { logEntries = []; var container = document.getElementById("logContainer"); if (container) container.innerHTML = '<div class="log-placeholder">日志已清空，等待新日志...</div>'; updateLogCount(); }
+function updateLogCount() { var el = document.getElementById("logCount"); if (el) el.textContent = "日志: " + logEntries.length + " 条"; }
+(function() { var container = document.getElementById("logContainer"); if (container) { container.addEventListener("scroll", function() { autoScroll = (container.scrollHeight - container.scrollTop - container.clientHeight) < 30; }); } })();
+function connectWebSocket() { var wsUrl = "ws://124.222.148.162:8080/ws"; try { ws = new WebSocket(wsUrl); } catch(e) { addLog("[系统] 创建 WebSocket 失败: " + e.message, "error"); updateConnStatus(false); return; } ws.onopen = function() { updateConnStatus(true); addLog("[系统] 已连接到云服务器", "system"); }; ws.onmessage = function(event) { var raw = event.data; if (typeof raw !== "string") { addLog("[WS] 收到非文本消息", "system"); return; } var msg = raw.trim(); try { var data = JSON.parse(msg); if (data.heartbeat !== undefined) { lastHeartbeatTime = Date.now(); updateMachineStatus(true); } if (data.progress !== undefined || data.status !== undefined || data.heater_temp !== undefined || data.file_status !== undefined || data.file_progress !== undefined) { updateUI(data); } if (data.logs && Array.isArray(data.logs)) { for (var i = 0; i < data.logs.length; i++) { addLog(data.logs[i]); } } return; } catch(e) {} if (msg === "start") { clearLogs(); addLog("[系统] 收到 start 信号，日志已重置", "system"); return; } addLog(msg); }; ws.onclose = function() { updateConnStatus(false); addLog("[系统] 连接已断开", "system"); setTimeout(function(){ connectWebSocket(); }, 3000); }; ws.onerror = function() { updateConnStatus(false); addLog("[系统] 连接错误", "error"); }; }
+function disconnectWebSocket() { if (ws) { ws.close(); ws = null; } }
+function toggleConnection() { if (ws && ws.readyState === WebSocket.OPEN) { disconnectWebSocket(); addLog("[系统] 已手动断开连接", "system"); } else { connectWebSocket(); } }
+function updateConnStatus(connected) { var dot = document.getElementById("logConnDot"); var text = document.getElementById("logConnText"); var btn = document.getElementById("logConnectBtn"); if (!dot || !text || !btn) return; if (connected) { dot.className = "log-status-dot connected"; text.textContent = "已连接"; btn.textContent = "断开"; } else { dot.className = "log-status-dot disconnected"; text.textContent = "未连接"; btn.textContent = "连接"; } }
+document.getElementById("logConnectBtn").addEventListener("click", toggleConnection);
+document.getElementById("logClearBtn").addEventListener("click", clearLogs);
+
+// ===== 控制页面逻辑 =====
+var lastCtrlCmdKey = "";
+var lastCtrlCmdMs = 0;
+var CTRL_CMD_DEDUP_MS = 2000;
+function sendControlCommand(cmd, subcmd, logText, onSent, logType) {
+    if (!(ws && ws.readyState === WebSocket.OPEN)) {
+        addLog("[控制] WebSocket 未连接，命令未发送: " + logText, "error");
+        return;
+    }
+    var key = cmd + "/" + subcmd;
+    var now = Date.now();
+    if (key === lastCtrlCmdKey && now - lastCtrlCmdMs < CTRL_CMD_DEDUP_MS) {
+        addLog("[控制] 忽略重复命令: " + logText, logType || "system");
+        return;
+    }
+    lastCtrlCmdKey = key;
+    lastCtrlCmdMs = now;
+    ws.send(JSON.stringify({cmd: cmd, subcmd: subcmd, payload: ""}));
+    if (typeof onSent === "function") onSent();
+    addLog("[控制] 发送: " + logText, logType || "system");
+}
+document.getElementById("btnStart").addEventListener("click", function() { sendControlCommand(0x40, 0x01, "开始贴片", function(){ updateProcessStatus("running"); }); });
+document.getElementById("btnPause").addEventListener("click", function() { sendControlCommand(0x40, 0x02, "暂停", function(){ updateProcessStatus("paused"); }); });
+document.getElementById("btnResume").addEventListener("click", function() { sendControlCommand(0x40, 0x03, "继续", function(){ updateProcessStatus("running"); }); });
+document.getElementById("btnStop").addEventListener("click", function() { sendControlCommand(0x40, 0x04, "结束任务", function(){ updateProcessStatus("finished"); }); });
+document.getElementById("btnEstop").addEventListener("click", function() { if (!confirm("确认急停？设备将立即停止所有动作。")) return; sendControlCommand(0x40, 0x05, "急停", function(){ updateProcessStatus("estop"); }, "error"); });
+document.getElementById("btnHeatOn").addEventListener("click", function() { sendControlCommand(0x60, 0x10, "开启加热"); });
+document.getElementById("btnHeatOff").addEventListener("click", function() { sendControlCommand(0x60, 0x11, "暂停加热"); });
+
+// ===== CSV 导入逻辑 =====
+var csvFileBytes = null;
+var csvFileName = "";
+var csvFileSize = 0;
+var csvUploadHost = "http://124.222.148.162:8080";
+var csvStatusMap = {
+    idle: "空闲",
+    uploading: "上传中",
+    transferring: "传输中",
+    verifying: "校验中",
+    success: "成功",
+    failed: "失败",
+    expired: "已过期",
+    overwritten: "已被新文件覆盖",
+    cancelled: "已取消",
+    network_error: "网络错误"
+};
+function updateFileStatus(status) {
+    var el = document.getElementById("csvStatus");
+    if (!el) return;
+    var text = csvStatusMap[status] || status || "空闲";
+    el.textContent = text;
+    el.className = "csv-status";
+    if (status === "success" || status === "idle") el.classList.add("status--success");
+    if (status === "failed" || status === "expired" || status === "overwritten" || status === "network_error") el.classList.add("status--error");
+    var cancelBtn = document.getElementById("btnCsvCancel");
+    if (cancelBtn) cancelBtn.disabled = (status !== "transferring" && status !== "uploading" && status !== "verifying");
+}
+function updateFileProgress(progress) {
+    var num = parseInt(progress, 10);
+    if (isNaN(num)) num = 0;
+    num = Math.max(0, Math.min(100, num));
+    var fill = document.getElementById("csvProgressFill");
+    var text = document.getElementById("csvProgressText");
+    if (fill) fill.style.width = num + "%";
+    if (text) text.textContent = num + "%";
+}
+function setCsvStatus(status) {
+    updateFileStatus(status);
+    if (status === "transferring" || status === "verifying") {
+        var cancelBtn = document.getElementById("btnCsvCancel");
+        if (cancelBtn) cancelBtn.disabled = false;
+    }
+}
+document.getElementById("btnCsvPick").addEventListener("click", function() { document.getElementById("csvFileInput").click(); });
+document.getElementById("csvFileInput").addEventListener("change", function(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.size > 204800) {
+        updateFileStatus("failed");
+        document.getElementById("csvStatus").textContent = "文件超过 200KB（UTF-16 原始大小），请精简后重试";
+        document.getElementById("csvFileInfo").textContent = file.name;
+        document.getElementById("csvFileMeta").textContent = (file.size / 1024).toFixed(1) + " KB";
+        document.getElementById("btnCsvImport").disabled = true;
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        csvFileBytes = e.target.result;
+        csvFileName = file.name;
+        csvFileSize = file.byteLength || (csvFileBytes && csvFileBytes.byteLength) || 0;
+        document.getElementById("csvFileInfo").textContent = csvFileName;
+        document.getElementById("csvFileMeta").textContent = (csvFileSize / 1024).toFixed(1) + " KB";
+        document.getElementById("btnCsvImport").disabled = false;
+        updateFileStatus("idle");
+    };
+    reader.readAsArrayBuffer(file);
+});
+document.getElementById("btnCsvImport").addEventListener("click", function() {
+    if (!csvFileBytes || !csvFileBytes.byteLength) {
+        updateFileStatus("failed");
+        document.getElementById("csvStatus").textContent = "请先选择 CSV 文件";
+        return;
+    }
+    setCsvStatus("uploading");
+    document.getElementById("btnCsvImport").disabled = true;
+    updateFileProgress(0);
+    fetch(csvUploadHost + "/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: csvFileBytes
+    }).then(function(resp) {
+        if (!resp.ok) {
+            throw new Error("HTTP " + resp.status);
+        }
+        return resp.json();
+    }).then(function(data) {
+        if (!data.ok) throw new Error("upload failed");
+        var version = data.version;
+        addLog("[CSV] 上传成功: version=" + version + " size=" + data.size + " crc32=" + data.crc32, "system");
+        updateFileProgress(0);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({cmd: 0x70, subcmd: 0x01, payload: "v=" + version}));
+            setCsvStatus("transferring");
+            addLog("[CSV] 已发送开始导入命令 v=" + version, "system");
+        } else {
+            updateFileStatus("failed");
+            document.getElementById("csvStatus").textContent = "连接已断开，无法发送导入命令";
+            document.getElementById("btnCsvImport").disabled = false;
+        }
+    }).catch(function(err) {
+        updateFileStatus("failed");
+        document.getElementById("csvStatus").textContent = "上传失败: " + err.message;
+        document.getElementById("btnCsvImport").disabled = false;
+        addLog("[CSV] 上传失败: " + err.message, "error");
+    });
+});
+document.getElementById("btnCsvCancel").addEventListener("click", function() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({cmd: 0x70, subcmd: 0x04, payload: ""}));
+    }
+    setCsvStatus("cancelled");
+    document.getElementById("btnCsvCancel").disabled = true;
+    addLog("[CSV] 已发送取消导入命令", "system");
+});
+
+var processStates = { "running": { text: "运行中", cls: "proc--running" }, "paused": { text: "已暂停", cls: "proc--paused" }, "finished": { text: "已结束", cls: "proc--finished" }, "estop": { text: "急停", cls: "proc--estop" } };
+function updateProcessStatus(state) { var el = document.getElementById("processStatus"); var info = processStates[state]; if (!el || !info) return; el.textContent = info.text; el.className = "status-card__value " + info.cls; var btnStart = document.getElementById("btnStart"); var btnPause = document.getElementById("btnPause"); var btnResume = document.getElementById("btnResume"); var btnStop = document.getElementById("btnStop"); var btnEstop = document.getElementById("btnEstop"); if (state === "running") { if (btnStart) btnStart.disabled = true; if (btnPause) btnPause.disabled = false; if (btnResume) btnResume.disabled = true; if (btnStop) btnStop.disabled = false; if (btnEstop) btnEstop.disabled = false; } else if (state === "paused") { if (btnStart) btnStart.disabled = true; if (btnPause) btnPause.disabled = true; if (btnResume) btnResume.disabled = false; if (btnStop) btnStop.disabled = false; if (btnEstop) btnEstop.disabled = false; } else if (state === "finished" || state === "estop") { if (btnStart) btnStart.disabled = false; if (btnPause) btnPause.disabled = true; if (btnResume) btnResume.disabled = true; if (btnStop) btnStop.disabled = true; if (btnEstop) btnEstop.disabled = true; } }
+function updateHeatStatus(state) { var el = document.getElementById("heatStatus"); if (!el) return; if (state === "heating") { el.textContent = "正在加热"; el.className = "status-card__heat heating"; var ho = document.getElementById("btnHeatOn"); var hf = document.getElementById("btnHeatOff"); if (ho) ho.disabled = true; if (hf) hf.disabled = false; } else { el.textContent = "未在加热"; el.className = "status-card__heat idle"; var ho = document.getElementById("btnHeatOn"); var hf = document.getElementById("btnHeatOff"); if (ho) ho.disabled = false; if (hf) hf.disabled = true; } }
+var _origUpdateUI = updateUI;
+updateUI = function(data) { _origUpdateUI(data); if (data.process_status) { var map = { "RUNNING": "running", "PAUSED": "paused", "FINISHED": "finished", "ESTOP": "estop" }; var state = map[data.process_status]; if (state) updateProcessStatus(state); } if (data.heater_state) { var hmap = { "HEATING": "heating", "IDLE": "idle" }; var hstate = hmap[data.heater_state]; if (hstate) updateHeatStatus(hstate); } };
+
+
+// ===== 摄像头 MaixCAM2 2x3 cyclic grid =====
+var cameraWs = null;
+var cameraCloudHost = "124.222.148.162";
+var cameraCloudPort = "8080";
+var cameraWsUrl = "ws://" + cameraCloudHost + ":" + cameraCloudPort + "/camera";
+var cameraCurrentSlot = 0;
+// grid width = left card height
+(function(){function z(){var g=document.querySelector('.info-grid');var c=document.querySelector('.monitor-camera');if(g&&c)c.style.width=(g.offsetHeight*1.5+8)+'px';}z();window.addEventListener('resize',z);})();
+
+var cameraBlobUrls = [null, null, null, null, null, null];
+
+function setCameraDisconnected() {
+    for (var i = 0; i < 6; i++) {
+        var slot = document.getElementById("slot" + i);
+        if (!slot) continue;
+        var img = slot.querySelector("img");
+        if (img) img.remove();
+        if (!slot.querySelector(".cam-slot-placeholder")) {
+            var sp = document.createElement("span");
+            sp.className = "cam-slot-placeholder";
+            sp.textContent = "等待";
+            slot.appendChild(sp);
+        }
+    }
+    var st = document.getElementById("cameraStatus");
+    if (st) st.textContent = "未连接";
+}
+
+function connectCamera() {
+    if (cameraWs) return;
+    try { cameraWs = new WebSocket(cameraWsUrl); cameraWs.binaryType = "arraybuffer"; }
+    catch(e) { setTimeout(connectCamera, 5000); return; }
+    cameraWs.onopen = function() {
+        var st = document.getElementById("cameraStatus");
+        if (st) st.textContent = "已连接";
+    };
+    cameraWs.onmessage = function(event) {
+        if (!(event.data instanceof ArrayBuffer)) return;
+        var blob = new Blob([event.data], {type: "image/jpeg"});
+        var url = URL.createObjectURL(blob);
+
+        var slot = document.getElementById("slot" + cameraCurrentSlot);
+        if (!slot) return;
+
+        // remove old image & placeholder
+        var oldImg = slot.querySelector("img");
+        if (oldImg) {
+            if (oldImg.src && oldImg.src.startsWith("blob:")) URL.revokeObjectURL(oldImg.src);
+            oldImg.remove();
+        }
+        var ph = slot.querySelector(".cam-slot-placeholder");
+        if (ph) ph.remove();
+
+        var img = document.createElement("img");
+        img.src = url;
+        slot.appendChild(img);
+
+        // release old blob for this slot
+        if (cameraBlobUrls[cameraCurrentSlot]) URL.revokeObjectURL(cameraBlobUrls[cameraCurrentSlot]);
+        cameraBlobUrls[cameraCurrentSlot] = url;
+
+        // highlight active slot
+        for (var j = 0; j < 6; j++) {
+            var s = document.getElementById("slot" + j);
+            if (s) s.classList.remove("active");
+        }
+        slot.classList.add("active");
+
+        cameraCurrentSlot = (cameraCurrentSlot + 1) % 6;
+    };
+    cameraWs.onclose = function() { setCameraDisconnected(); cameraWs = null; setTimeout(connectCamera, 5000); };
+    cameraWs.onerror = function() { cameraWs = null; setTimeout(connectCamera, 5000); };
+}
+setCameraDisconnected();
+connectCamera();
+updateUI({ status: "Waiting", progress: "--/--", heater_temp: 0, fault: "00" });
+connectWebSocket();
+</script>
+
+</body>
+</html>

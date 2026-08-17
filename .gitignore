@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 环境变量与凭据（绝对不入库）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.secret
+id_rsa*
+id_ed25519*
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统与临时文件
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log
+*.tmp
+
+# 构建产物
+dist/
+build/
